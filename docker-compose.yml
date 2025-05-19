@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-graph-teams-app
+    restart: unless-stopped
+    env_file:
+      - .env # .envファイルから環境変数を読み込む
+    ports:
+      # ポートマッピングが必要な場合 (例: Webサーバーを公開する場合)
+      # - "3000:3000"
+    volumes:
+      # 開発時にソースコードの変更を即座に反映させたい場合 (本番では通常不要)
+      # - ./src:/usr/src/app/src 
+      # - ./dist:/usr/src/app/dist
+    # コマンドを上書きする場合 (DockerfileのCMDをオーバーライド)
+    # command: ["node", "dist/index.js"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
