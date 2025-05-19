@@ -1,0 +1,1 @@
+# MicrosoftGraphを用いてTypescriptでTeamsを動かすサンプル
