@@ -7,9 +7,10 @@ import { Team, Channel, ChatMessage } from '@microsoft/microsoft-graph-types';
  * @param client 認証済みのMicrosoft Graphクライアント
  */
 export async function listMyTeams(client: Client): Promise<void> {
-  console.log('参加しているチームの一覧を取得しています...');
+  console.log('アプリケーションがアクセス可能なチームの一覧を取得しています...'); // メッセージ変更
   try {
-    const response = await client.api('/me/joinedTeams')
+    // クライアント資格情報フローでは /me は使えないため、/teams を使用
+    const response = await client.api('/teams') 
       .select('id,displayName,description') // 必要なプロパティのみを選択
       .get();
     
@@ -41,7 +42,7 @@ export async function listChannels(client: Client, teamId: string): Promise<void
     console.warn('チームIDが指定されていません。チャネル一覧の取得をスキップします。');
     return;
   }
-  console.log(`チームID: ${teamId} のチャネル一覧を取得しています...');
+  console.log(`チームID: ${teamId} のチャネル一覧を取得しています...`);
   try {
     const response = await client.api(`/teams/${teamId}/channels`)
       .select('id,displayName,description')
@@ -49,7 +50,7 @@ export async function listChannels(client: Client, teamId: string): Promise<void
     
     const channels: Channel[] = response.value;
     if (channels && channels.length > 0) {
-      console.log(`チーム '${teamId}' のチャネル:');
+      console.log(`チーム '${teamId}' のチャネル:`);
       channels.forEach(channel => {
         console.log(`  - ${channel.displayName} (ID: ${channel.id})`);
         if (channel.description) {
@@ -57,10 +58,10 @@ export async function listChannels(client: Client, teamId: string): Promise<void
         }
       });
     } else {
-      console.log(`チーム '${teamId}' にチャネルはありません。');
+      console.log(`チーム '${teamId}' にチャネルはありません。`);
     }
   } catch (error) {
-    console.error(`チームID ${teamId} のチャネル一覧取得中にエラーが発生しました:', error);
+    console.error(`チームID ${teamId} のチャネル一覧取得中にエラーが発生しました:`, error);
     throw error;
   }
 }
@@ -82,7 +83,7 @@ export async function sendMessageToChannel(
     console.warn('チームIDまたはチャネルIDが指定されていません。メッセージ送信をスキップします。');
     return;
   }
-  console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信しています...');
+  console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信しています...`);
   
   const chatMessage: ChatMessage = {
     body: {
@@ -117,7 +118,7 @@ export async function listChannelMessages(
     console.warn('チームIDまたはチャネルIDが指定されていません。メッセージ一覧の取得をスキップします。');
     return;
   }
-  console.log(`チームID: ${teamId}, チャネルID: ${channelId} のメッセージ一覧を取得しています (上位${top}件)...');
+  console.log(`チームID: ${teamId}, チャネルID: ${channelId} のメッセージ一覧を取得しています (上位${top}件)...`);
   try {
     const response = await client.api(`/teams/${teamId}/channels/${channelId}/messages`)
       .top(top)
@@ -127,7 +128,7 @@ export async function listChannelMessages(
     
     const messages: ChatMessage[] = response.value;
     if (messages && messages.length > 0) {
-      console.log(`チャネル '${channelId}' のメッセージ (最新${messages.length}件):
+      console.log(`チャネル '${channelId}' のメッセージ (最新${messages.length}件):`);
       messages.forEach(message => {
         const sender = message.from?.user?.displayName || message.from?.application?.displayName || '不明な送信者';
         const content = message.body?.contentType === 'html' ? message.body.content : message.body?.content; // HTMLの場合はそのまま、textの場合はcontent
@@ -136,7 +137,7 @@ export async function listChannelMessages(
         console.log(`  [${new Date(message.createdDateTime! || '').toLocaleString()}] ${sender}: ${plainTextContent}`);
       });
     } else {
-      console.log(`チャネル '${channelId}' にメッセージはありません。');
+      console.log(`チャネル '${channelId}' にメッセージはありません。`);
     }
   } catch (error) {
     console.error('メッセージ一覧の取得中にエラーが発生しました:', error);

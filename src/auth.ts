@@ -2,7 +2,11 @@
 import 'isomorphic-fetch'; // Graphクライアントがfetch APIを必要とするため
 import { Client } from '@microsoft/microsoft-graph-client';
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials';
-import { ClientSecretCredential } from '@azure/msal-node';
+import { ClientSecretCredential } from '@azure/identity';
+import { setLogLevel } from '@azure/logger'; // Import setLogLevel
+
+// Azure SDK のログレベルを設定 (デバッグ用に詳細ログを出力)
+setLogLevel('info'); // 'verbose' や 'error' も指定可能
 
 // 環境変数から認証情報を取得
 const clientId = process.env.CLIENT_ID;
