@@ -1,4 +1,3 @@
-\
 # Microsoft Graph TypeScript Teams アプリ
 
 このプロジェクトは、TypeScript と Microsoft Graph SDK を使用して Microsoft Teams と対話する方法を示します。
@@ -109,8 +108,18 @@ Docker を使用してアプリケーションを実行するには、`docker-co
 *   `npm run dev`: `nodemon` と `tsc -w` を使用して開発モードでアプリケーションを実行します。
 *   `npm run lint`: ESLint を使用して TypeScript コードをリントします。
 *   `npm run format`: ESLint (`--fix` 付き) を使用して TypeScript コードをフォーマットします。
+*   `npm test`: Jest を使用してテストを実行します。
+*   `npm run test:watch`: 監視モードでテストを実行します（ファイル変更時に自動再実行）。
 
-## プロジェクト構成 (計画)
+## テスト
+
+テストは Jest を使用して実装されています。実際の認証情報を使わずにテストを実行できるようモックを使用しています。
+
+テストファイルは `tests` ディレクトリにあります：
+- `auth.spec.ts` - 認証機能のテスト
+- `graphService.spec.ts` - Graph APIを使ったTeams操作機能のテスト
+
+## プロジェクト構成
 
 ```
 .
@@ -119,13 +128,21 @@ Docker を使用してアプリケーションを実行するには、`docker-co
 ├── .env.example
 ├── .eslintrc.js
 ├── .gitignore
+├── jest.config.js
 ├── package.json
 ├── README.md
 ├── tsconfig.json
-└── src
-    ├── auth.ts         # Microsoft Graph の認証ロジック
-    ├── graphService.ts # Teams 操作のために Microsoft Graph API と対話するサービス (チーム一覧、チャネル一覧、メッセージ送受信、メッセージ一覧取得など)
-    ├── index.ts        # メインアプリケーションのエントリポイント (各種Graphサービス呼び出しのデモ)
-    └── types           # カスタム型定義 (もしあれば)
-        └── graph.d.ts
+├── src
+│   ├── auth.ts         # Microsoft Graph の認証ロジック
+│   ├── graphService.ts # Teams 操作のために Microsoft Graph API と対話するサービス
+│   ├── index.ts        # メインアプリケーションのエントリポイント 
+│   └── types           # カスタム型定義
+│       └── graph.d.ts
+└── tests
+    ├── auth.spec.ts          # 認証機能のテスト
+    ├── graphService.spec.ts  # Graph APIを使ったTeams操作機能のテスト
+    └── mocks                 # モックオブジェクト
+        ├── auth.mock.ts
+        ├── mockAuth.ts
+        └── mockGraphClient.ts
 ```
