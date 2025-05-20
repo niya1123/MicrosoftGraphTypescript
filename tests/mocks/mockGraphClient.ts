@@ -2,8 +2,17 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { Team, Channel, ChatMessage } from '@microsoft/microsoft-graph-types';
 
+interface MockClientType extends Partial<Client> {
+  api: jest.Mock;
+  select: jest.Mock;
+  get: jest.Mock;
+  post: jest.Mock;
+  top: jest.Mock;
+  orderby: jest.Mock;
+}
+
 export class MockGraphClient {
-  static createMockClient(responseData: any = {}) {
+  static createMockClient(responseData: any = {}): Client {
     const mockClient = {
       api: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
@@ -34,7 +43,7 @@ export class MockGraphClient {
     };
   }
 
-  static createErrorClient(error: Error) {
+  static createErrorClient(error: Error): Client {
     const mockClient = {
       api: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),

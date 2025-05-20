@@ -9,6 +9,16 @@ import {
 } from '../src/graphService';
 import { MockGraphClient } from './mocks/mockGraphClient';
 
+// Type assertion for mocked client methods
+interface MockedClient extends Client {
+  api: jest.Mock;
+  select: jest.Mock;
+  get: jest.Mock;
+  post: jest.Mock;
+  top: jest.Mock;
+  orderby: jest.Mock;
+}
+
 describe('Graph Service', () => {
   // Mock console methods to avoid cluttering test output
   const originalConsoleLog = console.log;
@@ -37,7 +47,7 @@ describe('Graph Service', () => {
       ];
       
       const mockResponse = MockGraphClient.createMockTeamsResponse(mockTeams);
-      const mockClient = MockGraphClient.createMockClient(mockResponse);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // Call the function
       await listMyTeams(mockClient);
@@ -52,7 +62,7 @@ describe('Graph Service', () => {
     test('handles empty teams list', async () => {
       // Prepare mock with empty teams array
       const mockResponse = MockGraphClient.createMockTeamsResponse([]);
-      const mockClient = MockGraphClient.createMockClient(mockResponse);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // Call the function
       await listMyTeams(mockClient);
@@ -65,7 +75,7 @@ describe('Graph Service', () => {
     test('handles errors during API call', async () => {
       // Prepare mock client that throws an error
       const mockError = new Error('API Error');
-      const mockClient = MockGraphClient.createErrorClient(mockError);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // Call the function and expect it to throw
       await expect(listMyTeams(mockClient)).rejects.toThrow('API Error');
@@ -90,7 +100,7 @@ describe('Graph Service', () => {
       ];
       
       const mockResponse = MockGraphClient.createMockChannelsResponse(mockChannels);
-      const mockClient = MockGraphClient.createMockClient(mockResponse);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // Call the function
       await listChannels(mockClient, teamId);
@@ -102,7 +112,7 @@ describe('Graph Service', () => {
     });
     
     test('handles empty teamId parameter', async () => {
-      const mockClient = MockGraphClient.createMockClient({});
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
       // Call with empty teamId
       await listChannels(mockClient, '');
@@ -115,7 +125,7 @@ describe('Graph Service', () => {
     test('handles errors during API call', async () => {
       // Prepare mock client that throws an error
       const mockError = new Error('API Error');
-      const mockClient = MockGraphClient.createErrorClient(mockError);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // Call the function and expect it to throw
       await expect(listChannels(mockClient, teamId)).rejects.toThrow('API Error');
@@ -136,7 +146,7 @@ describe('Graph Service', () => {
     
     test('successfully sends message to channel', async () => {
       // Prepare mock client
-      const mockClient = MockGraphClient.createMockClient({});
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
       // Call the function
       await sendMessageToChannel(mockClient, teamId, channelId, messageContent);
@@ -153,7 +163,7 @@ describe('Graph Service', () => {
     });
     
     test('handles missing teamId or channelId', async () => {
-      const mockClient = MockGraphClient.createMockClient({});
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
       // Call with empty teamId
       await sendMessageToChannel(mockClient, '', channelId, messageContent);
@@ -176,7 +186,7 @@ describe('Graph Service', () => {
     test('handles errors during API call', async () => {
       // Prepare mock client that throws an error
       const mockError = new Error('API Error');
-      const mockClient = MockGraphClient.createErrorClient(mockError);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // Call the function and expect it to throw
       await expect(sendMessageToChannel(mockClient, teamId, channelId, messageContent)).rejects.toThrow('API Error');
@@ -210,7 +220,7 @@ describe('Graph Service', () => {
       ];
       
       const mockResponse = MockGraphClient.createMockMessagesResponse(mockMessages);
-      const mockClient = MockGraphClient.createMockClient(mockResponse);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // Call the function
       await listChannelMessages(mockClient, teamId, channelId, top);
@@ -223,7 +233,7 @@ describe('Graph Service', () => {
     });
     
     test('handles missing teamId or channelId', async () => {
-      const mockClient = MockGraphClient.createMockClient({});
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
       // Call with empty teamId
       await listChannelMessages(mockClient, '', channelId);
@@ -246,7 +256,7 @@ describe('Graph Service', () => {
     test('handles errors during API call', async () => {
       // Prepare mock client that throws an error
       const mockError = new Error('API Error');
-      const mockClient = MockGraphClient.createErrorClient(mockError);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // Call the function and expect it to throw
       await expect(listChannelMessages(mockClient, teamId, channelId)).rejects.toThrow('API Error');
