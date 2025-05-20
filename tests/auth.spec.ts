@@ -3,18 +3,18 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials';
 import { ClientSecretCredential } from '@azure/identity';
 
-// Mock all the dependencies
+// すべての依存関係をモック化
 jest.mock('@azure/identity');
 jest.mock('@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials');
 jest.mock('@microsoft/microsoft-graph-client');
 jest.mock('@azure/logger');
 
-// Mock the actual implementation of getAuthenticatedClient
+// getAuthenticatedClientの実際の実装をモック化
 jest.mock('../src/auth', () => {
-  // Save the original module
+  // 元のモジュールを保存
   const originalModule = jest.requireActual('../src/auth');
   
-  // Mock the test implementation 
+  // テスト実装をモック化
   return {
     getAuthenticatedClient: jest.fn(async () => {
       const mockedClient = {
@@ -28,28 +28,28 @@ jest.mock('../src/auth', () => {
   };
 });
 
-// Import the mocked module
+// モック化されたモジュールをインポート
 import { getAuthenticatedClient } from '../src/auth';
 
 describe('Authentication', () => {
-  // Save and restore environment variables
+  // 環境変数を保存して復元する
   const savedEnv = process.env;
   
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env = { ...savedEnv }; // Start with a clean copy
+    process.env = { ...savedEnv }; // クリーンなコピーで開始
     
-    // Set required environment variables
+    // 必要な環境変数を設定
     process.env.CLIENT_ID = 'test-client-id';
     process.env.CLIENT_SECRET = 'test-client-secret';
     process.env.TENANT_ID = 'test-tenant-id';
   });
   
   afterAll(() => {
-    process.env = savedEnv; // Restore original environment variables
+    process.env = savedEnv; // 元の環境変数を復元
   });
 
-  test('getAuthenticatedClient returns a client', async () => {
+  test('getAuthenticatedClientがクライアントを返す', async () => {
     const client = await getAuthenticatedClient();
     expect(client).toBeDefined();
     expect(getAuthenticatedClient).toHaveBeenCalled();

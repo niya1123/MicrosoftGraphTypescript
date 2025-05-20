@@ -2,7 +2,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 
 /**
- * Mock implementation of getAuthenticatedClient for testing
+ * テスト用のgetAuthenticatedClientのモック実装
  */
 export const getAuthenticatedClient = jest.fn().mockImplementation(async (): Promise<Client> => {
   return {
