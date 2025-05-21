@@ -18,7 +18,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '14'
+        node-version: '16'
         cache: 'npm'
         
     - name: Install dependencies
@@ -40,5 +40,16 @@ jobs:
       
     - name: Build and run tests in Docker
       run: |
-        docker build --target builder -t ms-graph-teams-app-test .
-        docker run --rm ms-graph-teams-app-test sh -c "npm ci && npm test"
+        # Create a Dockerfile.test that doesn't run prune --production so tests can run
+        cat > Dockerfile.test << EOF
+        FROM node:16-alpine
+        WORKDIR /usr/src/app
+        COPY package*.json ./
+        RUN npm ci
+        COPY . .
+        CMD ["npm", "test"]
+        EOF
+        
+        # Build and run the test container
+        docker build -f Dockerfile.test -t ms-graph-teams-app-test .
+        docker run --rm ms-graph-teams-app-test
