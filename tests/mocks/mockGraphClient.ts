@@ -13,14 +13,14 @@ interface MockClientType extends Partial<Client> {
 
 export class MockGraphClient {
   static createMockClient(responseData: any = {}): Client {
-    const mockClient = {
+    const mockClient: MockClientType = {
       api: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       get: jest.fn().mockResolvedValue(responseData),
       post: jest.fn().mockResolvedValue({}),
       top: jest.fn().mockReturnThis(),
       orderby: jest.fn().mockReturnThis()
-    } as unknown as Client;
+    };
     
     return mockClient;
   }
