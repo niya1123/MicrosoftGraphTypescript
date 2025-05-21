@@ -5,8 +5,9 @@ import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-grap
 import { ClientSecretCredential } from '@azure/identity';
 import { setLogLevel } from '@azure/logger'; // Import setLogLevel
 
-// Azure SDK のログレベルを設定 (デバッグ用に詳細ログを出力)
-setLogLevel('info'); // 'verbose' や 'error' も指定可能
+// Azure SDK のログレベルを設定 (環境に応じてログレベルを変更)
+const logLevel = process.env.NODE_ENV === 'production' ? 'error' : 'info'; // 'verbose' や 'error' も指定可能
+setLogLevel(logLevel);
 
 // 環境変数から認証情報を取得
 const clientId = process.env.CLIENT_ID;
