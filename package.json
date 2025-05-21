@@ -1,0 +1,42 @@
+{
+      "name": "microsoft-graph-typescript-teams",
+      "version": "1.0.0",
+      "description": "Microsoft Teams operations using Microsoft Graph and TypeScript",
+      "main": "dist/index.js",
+      "scripts": {
+            "build": "tsc",
+            "start": "node dist/index.js",
+            "dev": "tsc -w & nodemon dist/index.js",
+            "lint": "eslint src/**/*.ts",
+            "format": "eslint src/**/*.ts --fix",
+            "test": "jest",
+            "test:watch": "jest --watch"
+      },
+      "keywords": [
+            "microsoft-graph",
+            "teams",
+            "typescript"
+      ],
+      "author": "",
+      "license": "ISC",
+      "dependencies": {
+            "@azure/identity": "^4.2.0",
+            "@azure/logger": "^1.0.4",
+            "@azure/msal-node": "^1.18.0",
+            "@microsoft/microsoft-graph-client": "^3.0.7",
+            "dotenv": "^16.4.5",
+            "isomorphic-fetch": "^3.0.0"
+      },
+      "devDependencies": {
+            "@microsoft/microsoft-graph-types": "^1.38.0",
+            "@types/jest": "^29.5.14",
+            "@types/node": "^14.18.63",
+            "@typescript-eslint/eslint-plugin": "^4.33.0",
+            "@typescript-eslint/parser": "^4.33.0",
+            "eslint": "^7.32.0",
+            "jest": "^29.7.0",
+            "nodemon": "^3.1.0",
+            "ts-jest": "^29.3.4",
+            "typescript": "~4.9.5"
+      }
+}
