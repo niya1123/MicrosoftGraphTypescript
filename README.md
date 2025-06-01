@@ -66,6 +66,16 @@ Azure AD アプリケーション登録で以下のアクセス許可を設定�
     *   `TARGET_TEAM_ID` (任意): 操作に使用するデフォルトのチーム ID。
     *   `TARGET_CHANNEL_ID` (任意): 操作に使用するデフォルトのチャネル ID。
 
+### 追加ドキュメントと診断ツール
+
+Azure AD 設定や権限の確認には、以下のドキュメントとスクリプトが役立ちます。
+
+- **[AZURE_SETUP_GUIDE.md](AZURE_SETUP_GUIDE.md)** – メッセージ送信を有効にするための詳細な Azure AD 設定手順。
+- **[QUICK_FIX_GUIDE.md](QUICK_FIX_GUIDE.md)** – `AADSTS7000218` などの一般的な認証エラーを素早く解決するためのガイド。
+- **[AZURE_PERMISSION_FIX.md](AZURE_PERMISSION_FIX.md)** – API アクセス許可設定を修正するための手順。
+- `./azure-setup-check.sh` – 環境変数や Azure AD 設定をチェックする診断スクリプト。
+- `./diagnose-permissions.sh` – API 権限の状態を確認するスクリプト。
+
 ### Team ID と Channel ID の取得方法
 
 Microsoft Teams UIからTeam IDとChannel IDを取得する方法：
@@ -221,6 +231,8 @@ Docker を使用してアプリケーションを実行するには、`docker-co
 *   `npm run format`: ESLint (`--fix` 付き) を使用して TypeScript コードをフォーマットします。
 *   `npm test`: Jest を使用してテストを実行します。
 *   `npm run test:watch`: 監視モードでテストを実行します（ファイル変更時に自動再実行）。
+*   `./azure-setup-check.sh`: Azure AD 設定を確認する診断ツール。
+*   `./diagnose-permissions.sh`: API 権限の設定をチェックするツール。
 
 ## テスト
 
