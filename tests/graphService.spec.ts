@@ -235,7 +235,7 @@ describe('Graph Service', () => {
       
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
-      expect(console.error).toHaveBeenCalledWith('❌ メッセージ送信中にエラーが発生しました:', mockError);
+      expect(console.error).toHaveBeenCalledWith('❌ メッセージ送信に失敗しました:', mockError);
     });
   });
 
