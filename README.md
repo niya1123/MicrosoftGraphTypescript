@@ -35,6 +35,31 @@
     *   `TARGET_TEAM_ID` (任意): 操作に使用するデフォルトのチーム ID。
     *   `TARGET_CHANNEL_ID` (任意): 操作に使用するデフォルトのチャネル ID。
 
+### Team ID と Channel ID の取得方法
+
+Microsoft Teams UIからTeam IDとChannel IDを取得する方法：
+
+1. **Team ID の取得:**
+   - Microsoft Teams でチームを開く
+   - ブラウザのアドレスバーのURLを確認
+   - URLに含まれる `groupId=` パラメータの値がTeam ID
+   - 例: `https://teams.microsoft.com/_#/teamDashboard/General?groupId=a536b7f7-b65b-431a-b71e-cd386882d3e6`
+   - この場合のTeam ID: `a536b7f7-b65b-431a-b71e-cd386882d3e6`
+
+2. **Channel ID の取得:**
+   - Microsoft Teams でチャネルを開く
+   - ブラウザのアドレスバーのURLを確認
+   - URLに含まれる `threadId=` パラメータの値がChannel ID（URL エンコードされている）
+   - 例: `https://teams.microsoft.com/_#/channel/19%3Ab4cff4a9964b42dca8f2de52042dd340%40thread.tacv2/General?groupId=...&threadId=19%3Ab4cff4a9964b42dca8f2de52042dd340%40thread.tacv2`
+   - **重要:** URLデコードが必要
+     - エンコード済み: `19%3Ab4cff4a9964b42dca8f2de52042dd340%40thread.tacv2`
+     - デコード後: `19:b4cff4a9964b42dca8f2de52042dd340@thread.tacv2`
+   - `.env` ファイルにはデコード後の値を使用
+
+**注意事項:**
+- Application認証（Client Credential Flow）を使用している場合、メッセージ送信は制限されています
+- 読み取り機能（チーム一覧、チャネル一覧、メッセージ一覧）は正常に動作します
+
 ## ローカル開発
 
 1.  **TypeScript コードをビルドします:**
@@ -118,6 +143,30 @@ Docker を使用してアプリケーションを実行するには、`docker-co
 テストファイルは `tests` ディレクトリにあります：
 - `auth.spec.ts` - 認証機能のテスト
 - `graphService.spec.ts` - Graph APIを使ったTeams操作機能のテスト
+
+### テスト実行方法
+
+1. **全テスト実行:**
+   ```bash
+   npm test
+   ```
+
+2. **監視モードでテスト実行（ファイル変更時に自動再実行）:**
+   ```bash
+   npm run test:watch
+   ```
+
+3. **カバレッジレポート付きテスト実行:**
+   ```bash
+   npm test -- --coverage
+   ```
+
+4. **特定のテストファイルのみ実行:**
+   ```bash
+   npm test -- auth.spec.ts
+   # または
+   npm test -- graphService.spec.ts
+   ```
 
 ### 継続的インテグレーション
 
