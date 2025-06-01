@@ -1,6 +1,28 @@
 # Microsoft Graph TypeScript Teams アプリ
 
-このプロジェクトは、TypeScript と Microsoft Graph SDK を使用して Microsoft Teams と対話する方法を示します。
+このプロジェクトは、TypeScript と Microsoft Graph SDK を使用して Microsoft Teams と対話する方法を示します。**自動認証切り替え機能**により、読み取り操作には Application 認証、メッセージ送信には Delegated 認証を自動的に選択します。
+
+## 主な特徴
+
+- **🔄 自動認証切り替え**: 操作に応じて Application 認証と Delegated 認証を自動選択
+- **📖 読み取り操作**: チーム一覧、チャネル一覧、メッセージ一覧 (Application 認証)
+- **📝 メッセージ送信**: インタラクティブなメッセージ送信機能 (Delegated 認証)
+- **🔧 設定不要**: 一度の設定で両方の認証モードが利用可能
+- **✅ 完全テスト**: 全機能のユニットテスト実装済み
+
+## 認証アーキテクチャ
+
+このアプリケーションは、Microsoft Graph API の制約に対応するため、2つの認証方式を自動的に切り替えます：
+
+### Application 認証 (Client Credential Flow)
+- **用途**: 読み取り操作 (チーム、チャネル、メッセージ一覧の取得)
+- **特徴**: ユーザー操作不要、自動実行可能
+- **アクセス許可**: アプリケーション権限
+
+### Delegated 認証 (Device Code Flow)
+- **用途**: メッセージ送信操作
+- **特徴**: ユーザー認証が必要、ブラウザでの認証フロー
+- **アクセス許可**: 委任されたアクセス許可
 
 ## 前提条件
 
@@ -8,12 +30,21 @@
 *   npm または yarn
 *   Docker (Docker ベースの実行用)
 *   Microsoft Graph の必要なアクセス許可を持つ Azure AD アプリケーション登録 (詳細は [Microsoft ID プラットフォームにアプリケーションを登録する](https://learn.microsoft.com/ja-jp/graph/auth-register-app-v2) を参照)。
-    *   必要なアクセス許可 (委任されたアクセス許可またはアプリケーションのアクセス許可、認証フローによる):
-        *   `Team.ReadBasic.All`
-        *   `Channel.ReadBasic.All`
-        *   `ChannelMessage.Send`
-        *   `ChannelMessage.Read.All`
-        *   (および、特定の操作に必要なその他のアクセス許可)
+
+### 必要なアクセス許可
+
+Azure AD アプリケーション登録で以下のアクセス許可を設定してください：
+
+#### アプリケーション権限 (Application 認証用)
+- `Team.ReadBasic.All` - チーム情報の読み取り
+- `Channel.ReadBasic.All` - チャネル情報の読み取り
+- `ChannelMessage.Read.All` - チャネルメッセージの読み取り
+
+#### 委任されたアクセス許可 (Delegated 認証用)
+- `Team.ReadBasic.All` - チーム情報の読み取り
+- `Channel.ReadBasic.All` - チャネル情報の読み取り
+- `ChannelMessage.Send` - チャネルメッセージの送信
+- `ChannelMessage.Read.All` - チャネルメッセージの読み取り
 
 ## セットアップ
 
@@ -34,6 +65,16 @@
     *   `TENANT_ID`: Azure AD ディレクトリ (テナント) ID。
     *   `TARGET_TEAM_ID` (任意): 操作に使用するデフォルトのチーム ID。
     *   `TARGET_CHANNEL_ID` (任意): 操作に使用するデフォルトのチャネル ID。
+
+### 追加ドキュメントと診断ツール
+
+Azure AD 設定や権限の確認には、以下のドキュメントとスクリプトが役立ちます。
+
+- **[AZURE_SETUP_GUIDE.md](AZURE_SETUP_GUIDE.md)** – メッセージ送信を有効にするための詳細な Azure AD 設定手順。
+- **[QUICK_FIX_GUIDE.md](QUICK_FIX_GUIDE.md)** – `AADSTS7000218` などの一般的な認証エラーを素早く解決するためのガイド。
+- **[AZURE_PERMISSION_FIX.md](AZURE_PERMISSION_FIX.md)** – API アクセス許可設定を修正するための手順。
+- `./azure-setup-check.sh` – 環境変数や Azure AD 設定をチェックする診断スクリプト。
+- `./diagnose-permissions.sh` – API 権限の状態を確認するスクリプト。
 
 ### Team ID と Channel ID の取得方法
 
@@ -56,9 +97,64 @@ Microsoft Teams UIからTeam IDとChannel IDを取得する方法：
      - デコード後: `19:b4cff4a9964b42dca8f2de52042dd340@thread.tacv2`
    - `.env` ファイルにはデコード後の値を使用
 
-**注意事項:**
-- Application認証（Client Credential Flow）を使用している場合、メッセージ送信は制限されています
-- 読み取り機能（チーム一覧、チャネル一覧、メッセージ一覧）は正常に動作します
+## 🚀 自動認証切り替え機能
+
+このアプリケーションの最大の特徴は、操作に応じて最適な認証方式を自動選択することです：
+
+### 読み取り操作 (Application 認証)
+- `listMyTeams()` - チーム一覧取得
+- `listChannels(teamId)` - チャネル一覧取得
+- `listChannelMessages(teamId, channelId)` - メッセージ一覧取得
+
+これらの操作は **ユーザー操作なし** で実行されます。
+
+### メッセージ送信 (Delegated 認証)
+- `sendMessageToChannel(teamId, channelId, message)` - メッセージ送信
+
+この操作時には自動的に **Device Code Flow** が起動し、ユーザー認証を求められます：
+
+```
+🔐 ユーザー認証が必要です:
+   ブラウザで以下のURLにアクセスしてください: https://microsoft.com/devicelogin
+   表示される画面で以下のコードを入力してください: ABC123456
+   認証完了まで少々お待ちください...
+```
+
+## メッセージ送信機能
+
+### インタラクティブメッセージ送信
+
+アプリケーション実行時に、対話型のメッセージ送信機能が利用できます：
+
+- **コンソール入力**: ユーザーがコンソールからメッセージを入力
+- **自動認証**: メッセージ送信時に Delegated 認証を自動起動
+- **リアルタイム送信**: 入力されたメッセージを即座にTeamsチャネルに送信
+- **終了コマンド**: `exit`または`quit`で機能を終了
+- **エラーハンドリング**: 送信失敗時の適切なエラー処理
+
+### 実装内容
+
+```typescript
+// メッセージ送信 (認証は自動選択)
+await sendMessageToChannel(teamId, channelId, message);
+```
+
+主な機能：
+1. 自動 Delegated 認証クライアント取得
+2. 空のメッセージコンテンツの検証
+3. プレーンテキスト形式でのメッセージ送信
+4. 送信成功・失敗の視覚的フィードバック（絵文字付き）
+
+### 使用方法
+
+1. アプリケーションを実行すると、まず Application 認証で読み取り操作が実行されます
+2. インタラクティブモードで "メッセージを入力してください (exit/quitで終了): " プロンプトが表示されます
+3. 初回メッセージ送信時に Device Code Flow による認証が自動で開始されます
+4. ブラウザで認証を完了すると、メッセージがTeamsチャネルに送信されます
+5. 2回目以降の送信では認証は不要です（トークンキャッシュ済み）
+6. `exit`または`quit`を入力すると機能が終了します
+- 適切なAPI呼び出しパラメータの確認
+- エラーハンドリングのテスト
 
 ## ローカル開発
 
@@ -71,10 +167,10 @@ Microsoft Teams UIからTeam IDとChannel IDを取得する方法：
     npm start
     ```
     これにより、通常はメインスクリプト (例: `dist/index.js`) が実行されます。
-    このスクリプトは、以下の処理を試みます (環境変数 `TARGET_TEAM_ID` および `TARGET_CHANNEL_ID` の設定に依存します):
+    このスクリプトは、以下の処理を実行します (環境変数 `TARGET_TEAM_ID` および `TARGET_CHANNEL_ID` の設定に依存します):
     *   参加しているチームの一覧を表示します。
     *   `TARGET_TEAM_ID` が設定されていれば、そのチームのチャネル一覧を表示します。
-    *   `TARGET_TEAM_ID` と `TARGET_CHANNEL_ID` が設定されていれば、そのチャネルの最新メッセージ数件を表示し、新しいテストメッセージを送信します。
+    *   `TARGET_TEAM_ID` と `TARGET_CHANNEL_ID` が設定されていれば、そのチャネルの最新メッセージ数件を表示し、インタラクティブメッセージ送信機能を開始します。
 
 3.  **開発モード (自動リビルドと再起動あり):**
     ```bash
@@ -135,6 +231,8 @@ Docker を使用してアプリケーションを実行するには、`docker-co
 *   `npm run format`: ESLint (`--fix` 付き) を使用して TypeScript コードをフォーマットします。
 *   `npm test`: Jest を使用してテストを実行します。
 *   `npm run test:watch`: 監視モードでテストを実行します（ファイル変更時に自動再実行）。
+*   `./azure-setup-check.sh`: Azure AD 設定を確認する診断ツール。
+*   `./diagnose-permissions.sh`: API 権限の設定をチェックするツール。
 
 ## テスト
 
