@@ -1,6 +1,6 @@
 // src/graphService.ts
 import { Team, Channel, ChatMessage } from '@microsoft/microsoft-graph-types';
-import { getApplicationClient, getDelegatedClient } from './auth';
+import { getApplicationClient } from './auth';
 
 /**
  * 認証されたユーザーが参加しているチームの一覧を取得します。
@@ -70,7 +70,7 @@ export async function listChannels(teamId: string): Promise<void> {
 
 /**
  * 指定したチームの指定したチャネルにメッセージを送信します。
- * Delegated認証を自動的に使用します。
+ * まずDelegated認証を試行し、失敗した場合はApplication権限でimport形式を使用します。
  * @param teamId チームID
  * @param channelId チャネルID
  * @param messageContent 送信するメッセージの本文
@@ -90,22 +90,68 @@ export async function sendMessageToChannel(
     return;
   }
   
-  console.log(`📤 Delegated認証でメッセージを送信します...`);
   console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信しています...`);
   
-  const chatMessage: ChatMessage = {
-    body: {
-      content: messageContent,
-      contentType: 'text'
-    },
-  };
-
+  // 1. Delegated認証を試行（ユーザーコンテキストでの送信）
   try {
-    const client = await getDelegatedClient();
-    await client.api(`/teams/${teamId}/channels/${channelId}/messages`).post(chatMessage);
-    console.log('✅ メッセージが正常に送信されました。');
+    console.log('📤 Delegated認証でメッセージを送信中...');
+    const { getDelegatedClient } = await import('./auth');
+    const delegatedClient = await getDelegatedClient();
+    
+    const message: ChatMessage = {
+      body: {
+        content: messageContent,
+        contentType: 'text'
+      }
+    };
+
+    await delegatedClient.api(`/teams/${teamId}/channels/${channelId}/messages`)
+      .post(message);
+      
+    console.log('✅ メッセージが正常に送信されました（Delegated認証）。');
+    return;
   } catch (error) {
-    console.error('❌ メッセージ送信中にエラーが発生しました:', error);
+    console.warn('⚠️ Delegated認証でのメッセージ送信に失敗しました:', error);
+    console.log('📤 Application権限でのメッセージ送信にフォールバックします...');
+  }
+
+  // 2. Application認証でフォールバック（import mode）
+  try {
+    console.log('📤 Application権限でメッセージを送信中（import mode）...');
+    const client = await getApplicationClient();
+    
+    // import contextでメッセージを作成
+    const importMessage: ChatMessage = {
+      createdDateTime: new Date().toISOString(),
+      from: {
+        application: {
+          displayName: 'Microsoft Graph API Bot',
+          id: 'graph-api-bot'
+        }
+      },
+      body: {
+        content: messageContent,
+        contentType: 'text'
+      },
+      messageType: 'message',
+      importance: 'normal'
+    };
+
+    await client.api(`/teams/${teamId}/channels/${channelId}/messages`)
+      .header('Content-Type', 'application/json')
+      .post(importMessage);
+      
+    console.log('✅ メッセージが正常に送信されました（Application権限 - import mode）。');
+  } catch (error) {
+    console.error('❌ すべての認証方法でメッセージ送信に失敗しました:', error);
+    console.log('\n💡 メッセージ送信を有効にするには、以下のいずれかを実行してください：');
+    console.log('   1. Azure Portal > App registrations > 認証:');
+    console.log('      - リダイレクト URI: http://localhost:3000/auth/callback');
+    console.log('      - Publicクライアントフローを許可: はい');
+    console.log('   2. Azure Portal > API のアクセス許可:');
+    console.log('      - ChannelMessage.Send (Delegated)');
+    console.log('      - ChannelMessage.Send (Application) - 管理者の同意が必要');
+    console.log('   3. Teams管理センターでアプリケーションを承認\n');
     throw error;
   }
 }

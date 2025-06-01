@@ -5,6 +5,17 @@ import { listMyTeams, listChannels, listChannelMessages, sendMessageToChannel } 
 
 // メインの非同期関数
 async function main() {
+  // プロセス終了時のクリーンアップ
+  process.on('SIGINT', async () => {
+    console.log('\n\n🛑 アプリケーションを終了しています...');
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('\n\n🛑 アプリケーションを終了しています...');
+    process.exit(0);
+  });
+
   console.log('アプリケーションを開始します...');
 
   try {

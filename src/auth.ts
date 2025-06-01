@@ -6,8 +6,22 @@ import { ClientSecretCredential, DeviceCodeCredential } from '@azure/identity';
 import { setLogLevel } from '@azure/logger';
 
 // Azure SDK のログレベルを設定 (環境に応じてログレベルを変更)
-const logLevel = process.env.NODE_ENV === 'production' ? 'error' : 'info';
-setLogLevel(logLevel);
+const defaultLogLevel = process.env.NODE_ENV === 'production' ? 'error' : 'info';
+setLogLevel(defaultLogLevel);
+
+/**
+ * 認証中のログレベルを一時的に変更する関数
+ */
+function suppressLogsForAuth() {
+  setLogLevel('error'); // 認証中はエラーログのみ表示
+}
+
+/**
+ * 認証完了後にログレベルを復元する関数
+ */
+function restoreLogLevel() {
+  setLogLevel(defaultLogLevel); // 元のログレベルに戻す
+}
 
 // 環境変数から認証情報を取得
 const clientId = process.env.CLIENT_ID;
@@ -79,7 +93,7 @@ export class AuthManager {
 
   /**
    * Delegated認証クライアントを作成
-   * Device Code Flowを使用
+   * Device Code Flowを使用（Azure ADアプリでPublicクライアントフローが有効である必要があります）
    */
   private async createDelegatedClient(): Promise<Client> {
     if (!clientId || !tenantId) {
@@ -89,14 +103,47 @@ export class AuthManager {
       );
     }
 
+    console.log('🔧 Device Code Flow認証を設定中...');
+    console.log('⚠️ Azure AD アプリケーションでPublicクライアントフローが有効になっている必要があります。');
+    console.log('   Azure Portal > App registrations > 認証 > 詳細設定 > Publicクライアントフローを許可する = はい');
+
+    // ログ出力を一時的に抑制するためのフラグ
+    let authInProgress = false;
+
     const credential = new DeviceCodeCredential({
       tenantId: tenantId,
       clientId: clientId,
       userPromptCallback: (info) => {
-        console.log('\n🔐 ユーザー認証が必要です:');
-        console.log(`   ブラウザで以下のURLにアクセスしてください: ${info.verificationUri}`);
-        console.log(`   表示される画面で以下のコードを入力してください: ${info.userCode}`);
-        console.log('   認証完了まで少々お待ちください...\n');
+        // 認証開始時にログ抑制フラグを設定
+        authInProgress = true;
+        suppressLogsForAuth(); // Azure SDKのログを抑制
+        
+        // クリアで見やすい認証指示を表示
+        console.clear(); // 画面をクリアして見やすくする
+        console.log('');
+        console.log('🔐'.repeat(50));
+        console.log('🔐           ユーザー認証が必要です               🔐');
+        console.log('🔐'.repeat(50));
+        console.log('');
+        console.log('📋 認証手順:');
+        console.log('   1. ブラウザで以下のURLにアクセスしてください:');
+        console.log(`      📱 ${info.verificationUri}`);
+        console.log('');
+        console.log('   2. 表示される画面で以下のコードを入力してください:');
+        console.log(`      🔑 ${info.userCode}`);
+        console.log('');
+        console.log('   3. 認証完了まで少々お待ちください...');
+        console.log('');
+        console.log('🔐'.repeat(50));
+        console.log('');
+        console.log('💡 認証に失敗する場合は、Azure ADアプリの設定を確認してください：');
+        console.log('   • Azure Portal > Azure Active Directory > App registrations');
+        console.log(`   • アプリ "${clientId}" を選択`);
+        console.log('   • 認証 > 詳細設定 > "パブリック クライアント フローを許可する" を "はい" に設定');
+        console.log('   • API のアクセス許可でDelegatedアクセス許可が正しく設定されていることを確認');
+        console.log('');
+        console.log('⏳ 認証完了をお待ちしています...');
+        console.log('');
       },
     });
 
@@ -105,13 +152,25 @@ export class AuthManager {
         'https://graph.microsoft.com/Team.ReadBasic.All',
         'https://graph.microsoft.com/Channel.ReadBasic.All',
         'https://graph.microsoft.com/ChannelMessage.Send',
-        'https://graph.microsoft.com/ChannelMessage.Read.All'
+        'https://graph.microsoft.com/ChannelMessage.Read.All',
+        'https://graph.microsoft.com/User.Read'
       ],
     });
 
     const client = Client.initWithMiddleware({
       authProvider: authProvider,
     });
+
+    // 認証完了後にログ抑制フラグを解除
+    if (authInProgress) {
+      restoreLogLevel(); // Azure SDKのログレベルを復元
+      console.log('');
+      console.log('✅'.repeat(50));
+      console.log('✅           認証が完了しました！                   ✅');
+      console.log('✅'.repeat(50));
+      console.log('');
+      authInProgress = false;
+    }
 
     console.log('✅ Delegated認証クライアントの初期化が完了しました。');
     return client;
