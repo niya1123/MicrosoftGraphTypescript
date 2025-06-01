@@ -33,7 +33,6 @@ const createMockClient = (mockResponse: any, shouldThrow = false) => {
     select: jest.fn().mockReturnThis(),
     top: jest.fn().mockReturnThis(),
     orderby: jest.fn().mockReturnThis(),
-    header: jest.fn().mockReturnThis(),
     get: mockGet,
     post: mockPost,
   };
@@ -176,7 +175,7 @@ describe('Graph Service', () => {
     const messageContent = 'Test message';
     
     test('チャネルにメッセージを正常に送信する', async () => {
-      // モッククライアントをf��備
+      // モッククライアントを準備
       const mockClient = createMockClient({});
       
       (getDelegatedClient as jest.Mock).mockResolvedValue(mockClient);
@@ -227,15 +226,15 @@ describe('Graph Service', () => {
     test('API呼び出し中のエラーを処理する', async () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
-      const mockDelegatedClient = createMockClient(mockError, true);
+      const mockClient = createMockClient(mockError, true);
       
-      (getDelegatedClient as jest.Mock).mockResolvedValue(mockDelegatedClient);
+      (getDelegatedClient as jest.Mock).mockResolvedValue(mockClient);
       
       // 関数を呼び出して、スローされることを期待
       await expect(sendMessageToChannel(teamId, channelId, messageContent)).rejects.toThrow('API Error');
       
-      // インタラクションを検証 - Delegated認証が試行されることを確認
-      expect(mockDelegatedClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
+      // インタラクションを検証
+      expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
       expect(console.error).toHaveBeenCalledWith('❌ メッセージ送信に失敗しました:', mockError);
     });
   });
