@@ -8,14 +8,14 @@ async function main() {
   console.log('アプリケーションを開始します...');
 
   try {
-    // 認証済みGraphクライアントを取得
-    const graphClient = await getAuthenticatedClient();
+    // 認証済みGraphクライアントを取得（認証の確認のため）
+    await getAuthenticatedClient();
     console.log('Microsoft Graphクライアントの認証に成功しました。');
 
     // --- ここから具体的なGraph API操作を実装します ---
 
     // 例1: 参加しているチームの一覧を取得して表示
-    await listMyTeams(graphClient);
+    await listMyTeams();
 
     // .envファイルまたは環境変数でTARGET_TEAM_IDとTARGET_CHANNEL_IDを設定してください
     const teamId = process.env.TARGET_TEAM_ID;
@@ -24,19 +24,19 @@ async function main() {
     if (teamId) {
       // 例2: 指定したチームのチャネル一覧を取得
       console.log('\n--- チャネル一覧の取得テスト ---');
-      await listChannels(graphClient, teamId);
+      await listChannels(teamId);
 
       if (channelId) {
         // 例3: 指定したチャネルのメッセージ一覧を取得
         console.log('\n--- メッセージ一覧の取得テスト ---');
-        await listChannelMessages(graphClient, teamId, channelId, 5); // 最新5件を取得
+        await listChannelMessages(teamId, channelId, 5); // 最新5件を取得
 
         // 例4: 特定のチームの特定のチャネルにメッセージを送信 (権限がある場合のみ)
         console.log('\n--- メッセージ送信テスト ---');
         const messageContent = 'TypeScriptアプリからのテストメッセージです！ (時刻: ' + new Date().toLocaleString('ja-JP') + ')';
         console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信します...`);
         try {
-          await sendMessageToChannel(graphClient, teamId, channelId, messageContent);
+          await sendMessageToChannel(teamId, channelId, messageContent);
         } catch (error: any) {
           if (error.code === 'Forbidden' && error.message?.includes('Teamwork.Migrate.All')) {
             console.log('⚠️  メッセージ送信にはTeamwork.Migrate.All権限が必要です。現在は読み取り専用で動作しています。');

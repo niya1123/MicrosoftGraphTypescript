@@ -45,3 +45,22 @@ export async function getAuthenticatedClient(): Promise<Client> {
 
   return client;
 }
+
+/**
+ * Application権限でMicrosoft Graph APIクライアントを取得します。
+ * @returns {Promise<Client>} 認証済みのMicrosoft Graphクライアントインスタンス
+ */
+export async function getApplicationClient(): Promise<Client> {
+  return getAuthenticatedClient();
+}
+
+/**
+ * Delegated権限でMicrosoft Graph APIクライアントを取得します。
+ * 現在は未実装で、Application権限のクライアントを返します。
+ * @returns {Promise<Client>} 認証済みのMicrosoft Graphクライアントインスタンス
+ */
+export async function getDelegatedClient(): Promise<Client> {
+  // TODO: Delegated認証の実装が必要
+  // 現在はApplication認証のクライアントを返す
+  return getAuthenticatedClient();
+}

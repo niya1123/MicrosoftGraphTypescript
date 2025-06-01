@@ -1,4 +1,5 @@
 // tests/graphService.spec.ts
+import { Client } from '@microsoft/microsoft-graph-client';
 import { Team, Channel, ChatMessage } from '@microsoft/microsoft-graph-types';
 import { 
   listMyTeams, 
@@ -6,38 +7,17 @@ import {
   sendMessageToChannel, 
   listChannelMessages 
 } from '../src/graphService';
+import { MockGraphClient } from './mocks/mockGraphClient';
 
-// 認証モジュールをモック化
-jest.mock('../src/auth', () => ({
-  getApplicationClient: jest.fn(),
-  getDelegatedClient: jest.fn(),
-}));
-
-import { getApplicationClient, getDelegatedClient } from '../src/auth';
-
-// モッククライアントの作成ヘルパー
-const createMockClient = (mockResponse: any, shouldThrow = false) => {
-  const mockGet = jest.fn();
-  const mockPost = jest.fn();
-  
-  if (shouldThrow) {
-    mockGet.mockRejectedValue(mockResponse);
-    mockPost.mockRejectedValue(mockResponse);
-  } else {
-    mockGet.mockResolvedValue(mockResponse);
-    mockPost.mockResolvedValue(mockResponse);
-  }
-
-  return {
-    api: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    top: jest.fn().mockReturnThis(),
-    orderby: jest.fn().mockReturnThis(),
-    header: jest.fn().mockReturnThis(),
-    get: mockGet,
-    post: mockPost,
-  };
-};
+// モッククライアントメソッドの型アサーション
+interface MockedClient extends Client {
+  api: jest.Mock;
+  select: jest.Mock;
+  get: jest.Mock;
+  post: jest.Mock;
+  top: jest.Mock;
+  orderby: jest.Mock;
+}
 
 describe('Graph Service', () => {
   // テスト出力を混乱させないためにconsoleメソッドをモック化
@@ -49,34 +29,30 @@ describe('Graph Service', () => {
     console.log = jest.fn();
     console.warn = jest.fn();
     console.error = jest.fn();
-    jest.clearAllMocks();
   });
 
   afterEach(() => {
     console.log = originalConsoleLog;
     console.warn = originalConsoleWarn;
     console.error = originalConsoleError;
+    jest.clearAllMocks();
   });
 
   describe('listMyTeams', () => {
-    test('正常にチーム一覧を取得する', async () => {
+    test('APIがチームを返すと正常にチーム一覧を取得する', async () => {
       // モックデータを準備
       const mockTeams: Partial<Team>[] = [
         { id: 'team-1', displayName: 'Test Team 1', description: 'Team 1 Description' },
         { id: 'team-2', displayName: 'Test Team 2' }
       ];
       
-      const mockResponse = { value: mockTeams };
-      const mockClient = createMockClient(mockResponse);
-      
-      // 認証関数のモックを設定
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockResponse = MockGraphClient.createMockTeamsResponse(mockTeams);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // 関数を呼び出す
-      await listMyTeams();
+      await listMyTeams(mockClient);
       
       // インタラクションを検証
-      expect(getApplicationClient).toHaveBeenCalled();
       expect(mockClient.api).toHaveBeenCalledWith('/teams');
       expect(mockClient.select).toHaveBeenCalledWith('id,displayName,description');
       expect(console.log).toHaveBeenCalledWith('アプリケーションがアクセス可能なチームの一覧を取得しています...');
@@ -85,13 +61,11 @@ describe('Graph Service', () => {
     
     test('空のチームリストを処理する', async () => {
       // 空のチーム配列でモックを準備
-      const mockResponse = { value: [] };
-      const mockClient = createMockClient(mockResponse);
-      
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockResponse = MockGraphClient.createMockTeamsResponse([]);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // 関数を呼び出す
-      await listMyTeams();
+      await listMyTeams(mockClient);
       
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith('/teams');
@@ -101,12 +75,10 @@ describe('Graph Service', () => {
     test('API呼び出し中のエラーを処理する', async () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
-      const mockClient = createMockClient(mockError, true);
-      
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // 関数を呼び出して、スローされることを期待
-      await expect(listMyTeams()).rejects.toThrow('API Error');
+      await expect(listMyTeams(mockClient)).rejects.toThrow('API Error');
       
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith('/teams');
@@ -120,46 +92,43 @@ describe('Graph Service', () => {
   describe('listChannels', () => {
     const teamId = 'test-team-id';
     
-    test('正常にチャネル一覧を取得する', async () => {
+    test('APIがチャネルを返すと正常にチャネル一覧を取得する', async () => {
       // モックデータを準備
       const mockChannels: Partial<Channel>[] = [
         { id: 'channel-1', displayName: 'General', description: 'General Channel' },
         { id: 'channel-2', displayName: 'Random' }
       ];
       
-      const mockResponse = { value: mockChannels };
-      const mockClient = createMockClient(mockResponse);
-      
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockResponse = MockGraphClient.createMockChannelsResponse(mockChannels);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // 関数を呼び出す
-      await listChannels(teamId);
+      await listChannels(mockClient, teamId);
       
       // インタラクションを検証
-      expect(getApplicationClient).toHaveBeenCalled();
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels`);
       expect(mockClient.select).toHaveBeenCalledWith('id,displayName,description');
       expect(console.log).toHaveBeenCalledWith(`チームID: ${teamId} のチャネル一覧を取得しています...`);
     });
     
     test('空のteamIdパラメータを処理する', async () => {
-      // 空のteamIdで呼び出す
-      await listChannels('');
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
-      // 認証関数が呼ばれないことを確認
-      expect(getApplicationClient).not.toHaveBeenCalled();
+      // 空のteamIdで呼び出す
+      await listChannels(mockClient, '');
+      
+      // 警告を出し、API呼び出しをしないはず
+      expect(mockClient.api).not.toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith('チームIDが指定されていません。チャネル一覧の取得をスキップします。');
     });
     
     test('API呼び出し中のエラーを処理する', async () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
-      const mockClient = createMockClient(mockError, true);
-      
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // 関数を呼び出して、スローされることを期待
-      await expect(listChannels(teamId)).rejects.toThrow('API Error');
+      await expect(listChannels(mockClient, teamId)).rejects.toThrow('API Error');
       
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels`);
@@ -176,69 +145,55 @@ describe('Graph Service', () => {
     const messageContent = 'Test message';
     
     test('チャネルにメッセージを正常に送信する', async () => {
-      // モッククライアントをf��備
-      const mockClient = createMockClient({});
-      
-      (getDelegatedClient as jest.Mock).mockResolvedValue(mockClient);
+      // モッククライアントを準備
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
       // 関数を呼び出す
-      await sendMessageToChannel(teamId, channelId, messageContent);
+      await sendMessageToChannel(mockClient, teamId, channelId, messageContent);
       
       // インタラクションを検証
-      expect(getDelegatedClient).toHaveBeenCalled();
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
       expect(mockClient.post).toHaveBeenCalledWith({
         body: {
           content: messageContent,
-          contentType: 'text',
+          contentType: 'html',
         },
       });
-      expect(console.log).toHaveBeenCalledWith('✅ メッセージが正常に送信されました（Delegated認証）。');
+      expect(console.log).toHaveBeenCalledWith('メッセージが正常に送信されました。');
     });
     
     test('teamIdまたはchannelIdが欠けている場合を処理する', async () => {
-      // 空のteamIdで呼び出す
-      await sendMessageToChannel('', channelId, messageContent);
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
-      // 認証関数が呼ばれないことを確認
-      expect(getDelegatedClient).not.toHaveBeenCalled();
+      // 空のteamIdで呼び出す
+      await sendMessageToChannel(mockClient, '', channelId, messageContent);
+      
+      // 警告を出し、API呼び出しをしないはず
+      expect(mockClient.api).not.toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith('チームIDまたはチャネルIDが指定されていません。メッセージ送信をスキップします。');
       
       // モックをリセット
       jest.clearAllMocks();
       
       // 空のchannelIdで呼び出す
-      await sendMessageToChannel(teamId, '', messageContent);
+      await sendMessageToChannel(mockClient, teamId, '', messageContent);
       
-      // 認証関数が呼ばれないことを確認
-      expect(getDelegatedClient).not.toHaveBeenCalled();
+      // 警告を出し、API呼び出しをしないはず
+      expect(mockClient.api).not.toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith('チームIDまたはチャネルIDが指定されていません。メッセージ送信をスキップします。');
-    });
-    
-    test('空のメッセージ内容を処理する', async () => {
-      // 空のメッセージで呼び出す
-      await sendMessageToChannel(teamId, channelId, '');
-      
-      // 認証関数が呼ばれないことを確認
-      expect(getDelegatedClient).not.toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith('メッセージ内容が空です。メッセージ送信をスキップします。');
     });
     
     test('API呼び出し中のエラーを処理する', async () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
-      const mockDelegatedClient = createMockClient(mockError, true);
-      const mockApplicationClient = createMockClient(mockError, true);
-      
-      (getDelegatedClient as jest.Mock).mockResolvedValue(mockDelegatedClient);
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockApplicationClient);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // 関数を呼び出して、スローされることを期待
-      await expect(sendMessageToChannel(teamId, channelId, messageContent)).rejects.toThrow('API Error');
+      await expect(sendMessageToChannel(mockClient, teamId, channelId, messageContent)).rejects.toThrow('API Error');
       
-      // インタラクションを検証 - Delegated認証が試行されることを確認
-      expect(mockDelegatedClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
-      expect(console.error).toHaveBeenCalledWith('❌ すべての認証方法でメッセージ送信に失敗しました:', mockError);
+      // インタラクションを検証
+      expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
+      expect(console.error).toHaveBeenCalledWith('メッセージ送信中にエラーが発生しました:', mockError);
     });
   });
 
@@ -247,7 +202,7 @@ describe('Graph Service', () => {
     const channelId = 'test-channel-id';
     const top = 5;
     
-    test('正常にメッセージ一覧を取得する', async () => {
+    test('APIがメッセージを返すと正常にメッセージ一覧を取得する', async () => {
       // モックデータを準備
       const mockMessages: Partial<ChatMessage>[] = [
         { 
@@ -264,48 +219,47 @@ describe('Graph Service', () => {
         }
       ];
       
-      const mockResponse = { value: mockMessages };
-      const mockClient = createMockClient(mockResponse);
-      
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockResponse = MockGraphClient.createMockMessagesResponse(mockMessages);
+      const mockClient = MockGraphClient.createMockClient(mockResponse) as unknown as MockedClient;
       
       // 関数を呼び出す
-      await listChannelMessages(teamId, channelId, top);
+      await listChannelMessages(mockClient, teamId, channelId, top);
       
       // インタラクションを検証
-      expect(getApplicationClient).toHaveBeenCalled();
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
       expect(mockClient.top).toHaveBeenCalledWith(top);
+      expect(mockClient.orderby).toHaveBeenCalledWith('createdDateTime DESC');
+      expect(mockClient.select).toHaveBeenCalledWith('id,body,from,createdDateTime');
     });
     
     test('teamIdまたはchannelIdが欠けている場合を処理する', async () => {
-      // 空のteamIdで呼び出す
-      await listChannelMessages('', channelId);
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
       
-      // 認証関数が呼ばれないことを確認
-      expect(getApplicationClient).not.toHaveBeenCalled();
+      // 空のteamIdで呼び出す
+      await listChannelMessages(mockClient, '', channelId);
+      
+      // 警告を出し、API呼び出しをしないはず
+      expect(mockClient.api).not.toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith('チームIDまたはチャネルIDが指定されていません。メッセージ一覧の取得をスキップします。');
       
       // モックをリセット
       jest.clearAllMocks();
       
       // 空のchannelIdで呼び出す
-      await listChannelMessages(teamId, '');
+      await listChannelMessages(mockClient, teamId, '');
       
-      // 認証関数が呼ばれないことを確認
-      expect(getApplicationClient).not.toHaveBeenCalled();
+      // 警告を出し、API呼び出しをしないはず
+      expect(mockClient.api).not.toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith('チームIDまたはチャネルIDが指定されていません。メッセージ一覧の取得をスキップします。');
     });
     
     test('API呼び出し中のエラーを処理する', async () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
-      const mockClient = createMockClient(mockError, true);
-      
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockClient);
+      const mockClient = MockGraphClient.createErrorClient(mockError) as unknown as MockedClient;
       
       // 関数を呼び出して、スローされることを期待
-      await expect(listChannelMessages(teamId, channelId)).rejects.toThrow('API Error');
+      await expect(listChannelMessages(mockClient, teamId, channelId)).rejects.toThrow('API Error');
       
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
