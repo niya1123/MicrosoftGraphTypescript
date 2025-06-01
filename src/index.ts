@@ -1,5 +1,6 @@
 // src/index.ts
 import 'dotenv/config'; // .envファイルを読み込む
+import * as readline from 'readline';
 import { getAuthenticatedClient } from './auth';
 import { listMyTeams, listChannels, listChannelMessages, sendMessageToChannel } from './graphService';
 
@@ -31,23 +32,9 @@ async function main() {
         console.log('\n--- メッセージ一覧の取得テスト ---');
         await listChannelMessages(graphClient, teamId, channelId, 5); // 最新5件を取得
 
-        // 例4: 特定のチームの特定のチャネルにメッセージを送信 (import目的)
-        console.log('\n--- メッセージ送信テスト (Import Mode) ---');
-        const messageContent = 'TypeScriptアプリからのテストメッセージです！ (時刻: ' + new Date().toLocaleString('ja-JP') + ')';
-        console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信します (Import Mode)...`);
-        try {
-          // Application認証ではimportモードでのみメッセージ送信が可能
-          await sendMessageToChannel(graphClient, teamId, channelId, messageContent, true);
-        } catch (error: any) {
-          if (error.code === 'Forbidden' && error.message?.includes('Teamwork.Migrate.All')) {
-            console.log('⚠️  メッセージ送信にはTeamwork.Migrate.All権限が必要です。現在は読み取り専用で動作しています。');
-          } else if (error.code === 'Unauthorized' && error.message?.includes('Message POST is allowed in application-only context only for import purposes')) {
-            console.log('⚠️  Application認証では通常のメッセージ送信はできません。Import機能を試行中...');
-            console.log('   📖 詳細: https://docs.microsoft.com/microsoftteams/platform/graph-api/import-messages/import-external-messages-to-teams');
-          } else {
-            console.log('🔄 Import機能での送信を試行しましたが、エラーが発生しました:', error.message);
-          }
-        }
+        // 例4: 対話的メッセージ送信機能
+        console.log('\n--- 対話的メッセージ送信 ---');
+        await interactiveMessageSending(graphClient, teamId, channelId);
       } else {
         console.warn(
           'TARGET_CHANNEL_ID が環境変数に設定されていません。メッセージ一覧取得とメッセージ送信はスキップされます。'
@@ -68,6 +55,58 @@ async function main() {
       console.error(error.stack);
     }
   }
+}
+
+/**
+ * 対話的メッセージ送信機能
+ * ユーザーからの入力を受け取ってメッセージを送信します
+ */
+async function interactiveMessageSending(graphClient: any, teamId: string, channelId: string): Promise<void> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  console.log('📝 メッセージ送信機能を開始します。');
+  console.log('   "exit" または "quit" と入力すると終了します。');
+  console.log('   空白行を入力すると送信をスキップします。\n');
+
+  const askForMessage = (): Promise<string> => {
+    return new Promise((resolve) => {
+      rl.question('💬 送信するメッセージを入力してください: ', (answer) => {
+        resolve(answer);
+      });
+    });
+  };
+
+  while (true) {
+    try {
+      const message = await askForMessage();
+      
+      // 終了コマンドをチェック
+      if (message.toLowerCase() === 'exit' || message.toLowerCase() === 'quit') {
+        console.log('👋 メッセージ送信機能を終了します。');
+        break;
+      }
+      
+      // 空白メッセージをスキップ
+      if (!message.trim()) {
+        console.log('⚠️  空のメッセージはスキップされました。\n');
+        continue;
+      }
+      
+      // メッセージを送信
+      console.log(`\n📤 メッセージを送信中: "${message}"`);
+      await sendMessageToChannel(graphClient, teamId, channelId, message);
+      console.log('');
+      
+    } catch (error: any) {
+      console.error('❌ メッセージ送信中にエラーが発生しました:', error.message);
+      console.log('🔄 次のメッセージを入力してください。\n');
+    }
+  }
+  
+  rl.close();
 }
 
 // アプリケーションを実行

@@ -156,35 +156,10 @@ describe('Graph Service', () => {
       expect(mockClient.post).toHaveBeenCalledWith({
         body: {
           content: messageContent,
-          contentType: 'html',
+          contentType: 'text',
         },
       });
-      expect(console.log).toHaveBeenCalledWith('メッセージが正常に送信されました。');
-    });
-
-    test('importModeでチャネルにメッセージを正常に送信する', async () => {
-      // モッククライアントを準備（header機能をモック）
-      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
-      const mockHeaderMethod = jest.fn().mockReturnValue(mockClient);
-      mockClient.api = jest.fn().mockReturnValue({
-        header: mockHeaderMethod,
-        post: mockClient.post
-      });
-      
-      // import機能で関数を呼び出す
-      await sendMessageToChannel(mockClient, teamId, channelId, messageContent, true);
-      
-      // インタラクションを検証
-      expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
-      expect(mockHeaderMethod).toHaveBeenCalledWith('MS-TEAMS-MESSAGE-TYPE', 'import');
-      
-      // postされたメッセージにcreatedDateTimeとfromが含まれていることを確認
-      const postCall = mockClient.post.mock.calls[0][0];
-      expect(postCall.body.content).toBe(messageContent);
-      expect(postCall.body.contentType).toBe('html');
-      expect(postCall.createdDateTime).toBeDefined();
-      expect(postCall.from.application.displayName).toBe('TypeScript Bot');
-      expect(console.log).toHaveBeenCalledWith('メッセージが正常に送信されました。');
+      expect(console.log).toHaveBeenCalledWith('✅ メッセージが正常に送信されました。');
     });
     
     test('teamIdまたはchannelIdが欠けている場合を処理する', async () => {
@@ -208,6 +183,17 @@ describe('Graph Service', () => {
       expect(console.warn).toHaveBeenCalledWith('チームIDまたはチャネルIDが指定されていません。メッセージ送信をスキップします。');
     });
     
+    test('空のメッセージ内容を処理する', async () => {
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
+      
+      // 空のメッセージで呼び出す
+      await sendMessageToChannel(mockClient, teamId, channelId, '');
+      
+      // 警告を出し、API呼び出しをしないはず
+      expect(mockClient.api).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith('メッセージ内容が空です。メッセージ送信をスキップします。');
+    });
+    
     test('API呼び出し中のエラーを処理する', async () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
@@ -218,7 +204,7 @@ describe('Graph Service', () => {
       
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
-      expect(console.error).toHaveBeenCalledWith('メッセージ送信中にエラーが発生しました:', mockError);
+      expect(console.error).toHaveBeenCalledWith('❌ メッセージ送信中にエラーが発生しました:', mockError);
     });
   });
 

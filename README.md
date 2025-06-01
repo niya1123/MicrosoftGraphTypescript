@@ -57,49 +57,49 @@ Microsoft Teams UIからTeam IDとChannel IDを取得する方法：
    - `.env` ファイルにはデコード後の値を使用
 
 **注意事項:**
-- Application認証（Client Credential Flow）を使用している場合、メッセージ送信は制限されています
+- Application認証（Client Credential Flow）を使用しています
 - 読み取り機能（チーム一覧、チャネル一覧、メッセージ一覧）は正常に動作します
+- **メッセージ送信の制限**: 現在のMicrosoft Graph APIの制約により、Application認証ではimport modeでのメッセージ送信のみがサポートされています。通常のメッセージ送信を行うには、Delegated認証（ユーザーコンテキスト）が必要です。
 
-## メッセージ送信機能（Import Mode）
+## メッセージ送信機能
 
-このアプリケーションは、Application認証でのメッセージ送信にImport Modeを実装しています。
+このアプリケーションは、Microsoft Graph APIを使用してTeamsチャネルにメッセージを送信する機能を提供します。
 
-### Import Modeの特徴
+### インタラクティブメッセージ送信
 
-Import Modeは、Microsoft Teams Importation API を使用してメッセージを送信する機能です：
+アプリケーション実行時に、対話型のメッセージ送信機能が利用できます：
 
-- **目的**: 外部システムから過去のメッセージデータをTeamsにインポートする
-- **認証**: Application認証（Client Credential Flow）が必要
-- **制限**: 通常のユーザーメッセージ送信とは異なり、特別なヘッダーと形式が必要
+- **コンソール入力**: ユーザーがコンソールからメッセージを入力
+- **リアルタイム送信**: 入力されたメッセージを即座にTeamsチャネルに送信
+- **終了コマンド**: `exit`または`quit`で機能を終了
+- **エラーハンドリング**: 送信失敗時の適切なエラー処理
 
 ### 実装内容
 
-`sendMessageToChannel` 関数では、5番目のパラメータとして `importMode` (boolean) を指定できます：
+`sendMessageToChannel` 関数は以下の特徴を持ちます：
 
 ```typescript
-// 通常モード（現在は制限のためエラーになる）
-await sendMessageToChannel(client, teamId, channelId, message, false);
-
-// Import Mode（推奨）
-await sendMessageToChannel(client, teamId, channelId, message, true);
+// メッセージ送信
+await sendMessageToChannel(client, teamId, channelId, message);
 ```
 
-Import Modeを有効にすると：
-1. `MS-TEAMS-MESSAGE-TYPE: import` ヘッダーが追加されます
-2. メッセージに `createdDateTime` フィールドが設定されます
-3. `from.application` フィールドでアプリケーション情報が設定されます
+主な機能：
+1. 空のメッセージコンテンツの検証
+2. プレーンテキスト形式でのメッセージ送信
+3. 送信成功・失敗の視覚的フィードバック（絵文字付き）
 
-### 技術的な制限
+### 使用方法
 
-Application認証では以下の制限があります：
-- 通常のユーザーメッセージ送信はサポートされていません
-- Import APIを使用した特殊な形式でのメッセージ送信のみ可能です
-- ただし、現在のMicrosoft Graph APIの制限により「User is missing」エラーが発生する場合があります
+1. アプリケーションを実行すると、インタラクティブモードが開始されます
+2. "メッセージを入力してください (exit/quitで終了): " プロンプトが表示されます
+3. メッセージを入力してEnterキーを押すと、Teamsチャネルに送信されます
+4. `exit`または`quit`を入力すると機能が終了します
 
 ### テスト内容
 
-- Import Mode機能のユニットテスト実装済み
-- 適切なヘッダーとメッセージフィールドの設定確認
+- メッセージ送信機能のユニットテスト実装済み
+- 空のメッセージコンテンツの検証テスト
+- 適切なAPI呼び出しパラメータの確認
 - エラーハンドリングのテスト
 
 ## ローカル開発
@@ -113,10 +113,10 @@ Application認証では以下の制限があります：
     npm start
     ```
     これにより、通常はメインスクリプト (例: `dist/index.js`) が実行されます。
-    このスクリプトは、以下の処理を試みます (環境変数 `TARGET_TEAM_ID` および `TARGET_CHANNEL_ID` の設定に依存します):
+    このスクリプトは、以下の処理を実行します (環境変数 `TARGET_TEAM_ID` および `TARGET_CHANNEL_ID` の設定に依存します):
     *   参加しているチームの一覧を表示します。
     *   `TARGET_TEAM_ID` が設定されていれば、そのチームのチャネル一覧を表示します。
-    *   `TARGET_TEAM_ID` と `TARGET_CHANNEL_ID` が設定されていれば、そのチャネルの最新メッセージ数件を表示し、新しいテストメッセージを送信します。
+    *   `TARGET_TEAM_ID` と `TARGET_CHANNEL_ID` が設定されていれば、そのチャネルの最新メッセージ数件を表示し、インタラクティブメッセージ送信機能を開始します。
 
 3.  **開発モード (自動リビルドと再起動あり):**
     ```bash

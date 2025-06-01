@@ -71,55 +71,38 @@ export async function listChannels(client: Client, teamId: string): Promise<void
  * @param client 認証済みのMicrosoft Graphクライアント
  * @param teamId チームID
  * @param channelId チャネルID
- * @param messageContent 送信するメッセージの本文 (HTML形式も可)
- * @param importMode import目的でのメッセージ送信かどうか (Application認証の場合はtrue)
+ * @param messageContent 送信するメッセージの本文
  */
 export async function sendMessageToChannel(
   client: Client, 
   teamId: string, 
   channelId: string, 
-  messageContent: string,
-  importMode: boolean = false
+  messageContent: string
 ): Promise<void> {
   if (!teamId || !channelId) {
     console.warn('チームIDまたはチャネルIDが指定されていません。メッセージ送信をスキップします。');
     return;
   }
+  
+  if (!messageContent.trim()) {
+    console.warn('メッセージ内容が空です。メッセージ送信をスキップします。');
+    return;
+  }
+  
   console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信しています...`);
   
   const chatMessage: ChatMessage = {
     body: {
       content: messageContent,
-      contentType: 'html', // 'text' または 'html'
+      contentType: 'text'
     },
   };
 
-  // import目的の場合は、過去の日時とfromフィールドを追加
-  if (importMode) {
-    // 現在の日時を設定（通常は過去の日時を指定）
-    chatMessage.createdDateTime = new Date().toISOString();
-    
-    // Application として送信者情報を設定
-    chatMessage.from = {
-      application: {
-        id: process.env.AZURE_CLIENT_ID || 'imported-app',
-        displayName: 'TypeScript Bot'
-      }
-    };
-  }
-
   try {
-    let request = client.api(`/teams/${teamId}/channels/${channelId}/messages`);
-    
-    // import目的の場合は特別なヘッダーを追加
-    if (importMode) {
-      request = request.header('MS-TEAMS-MESSAGE-TYPE', 'import');
-    }
-    
-    await request.post(chatMessage);
-    console.log('メッセージが正常に送信されました。');
+    await client.api(`/teams/${teamId}/channels/${channelId}/messages`).post(chatMessage);
+    console.log('✅ メッセージが正常に送信されました。');
   } catch (error) {
-    console.error('メッセージ送信中にエラーが発生しました:', error);
+    console.error('❌ メッセージ送信中にエラーが発生しました:', error);
     throw error;
   }
 }
