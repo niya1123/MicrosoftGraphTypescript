@@ -60,6 +60,48 @@ Microsoft Teams UIからTeam IDとChannel IDを取得する方法：
 - Application認証（Client Credential Flow）を使用している場合、メッセージ送信は制限されています
 - 読み取り機能（チーム一覧、チャネル一覧、メッセージ一覧）は正常に動作します
 
+## メッセージ送信機能（Import Mode）
+
+このアプリケーションは、Application認証でのメッセージ送信にImport Modeを実装しています。
+
+### Import Modeの特徴
+
+Import Modeは、Microsoft Teams Importation API を使用してメッセージを送信する機能です：
+
+- **目的**: 外部システムから過去のメッセージデータをTeamsにインポートする
+- **認証**: Application認証（Client Credential Flow）が必要
+- **制限**: 通常のユーザーメッセージ送信とは異なり、特別なヘッダーと形式が必要
+
+### 実装内容
+
+`sendMessageToChannel` 関数では、5番目のパラメータとして `importMode` (boolean) を指定できます：
+
+```typescript
+// 通常モード（現在は制限のためエラーになる）
+await sendMessageToChannel(client, teamId, channelId, message, false);
+
+// Import Mode（推奨）
+await sendMessageToChannel(client, teamId, channelId, message, true);
+```
+
+Import Modeを有効にすると：
+1. `MS-TEAMS-MESSAGE-TYPE: import` ヘッダーが追加されます
+2. メッセージに `createdDateTime` フィールドが設定されます
+3. `from.application` フィールドでアプリケーション情報が設定されます
+
+### 技術的な制限
+
+Application認証では以下の制限があります：
+- 通常のユーザーメッセージ送信はサポートされていません
+- Import APIを使用した特殊な形式でのメッセージ送信のみ可能です
+- ただし、現在のMicrosoft Graph APIの制限により「User is missing」エラーが発生する場合があります
+
+### テスト内容
+
+- Import Mode機能のユニットテスト実装済み
+- 適切なヘッダーとメッセージフィールドの設定確認
+- エラーハンドリングのテスト
+
 ## ローカル開発
 
 1.  **TypeScript コードをビルドします:**
