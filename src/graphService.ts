@@ -72,12 +72,14 @@ export async function listChannels(client: Client, teamId: string): Promise<void
  * @param teamId チームID
  * @param channelId チャネルID
  * @param messageContent 送信するメッセージの本文 (HTML形式も可)
+ * @param importMode import目的でのメッセージ送信かどうか (Application認証の場合はtrue)
  */
 export async function sendMessageToChannel(
   client: Client, 
   teamId: string, 
   channelId: string, 
-  messageContent: string
+  messageContent: string,
+  importMode: boolean = false
 ): Promise<void> {
   if (!teamId || !channelId) {
     console.warn('チームIDまたはチャネルIDが指定されていません。メッセージ送信をスキップします。');
@@ -92,8 +94,29 @@ export async function sendMessageToChannel(
     },
   };
 
+  // import目的の場合は、過去の日時とfromフィールドを追加
+  if (importMode) {
+    // 現在の日時を設定（通常は過去の日時を指定）
+    chatMessage.createdDateTime = new Date().toISOString();
+    
+    // Application として送信者情報を設定
+    chatMessage.from = {
+      application: {
+        id: process.env.AZURE_CLIENT_ID || 'imported-app',
+        displayName: 'TypeScript Bot'
+      }
+    };
+  }
+
   try {
-    await client.api(`/teams/${teamId}/channels/${channelId}/messages`).post(chatMessage);
+    let request = client.api(`/teams/${teamId}/channels/${channelId}/messages`);
+    
+    // import目的の場合は特別なヘッダーを追加
+    if (importMode) {
+      request = request.header('MS-TEAMS-MESSAGE-TYPE', 'import');
+    }
+    
+    await request.post(chatMessage);
     console.log('メッセージが正常に送信されました。');
   } catch (error) {
     console.error('メッセージ送信中にエラーが発生しました:', error);
@@ -126,8 +149,15 @@ export async function listChannelMessages(
     
     const messages: ChatMessage[] = response.value;
     if (messages && messages.length > 0) {
-      console.log(`チャネル '${channelId}' のメッセージ (最新${messages.length}件):`);
-      messages.forEach(message => {
+      // 作成日時で降順ソート（最新が最初）
+      const sortedMessages = messages.sort((a, b) => {
+        const dateA = new Date(a.createdDateTime || '').getTime();
+        const dateB = new Date(b.createdDateTime || '').getTime();
+        return dateB - dateA;
+      });
+      
+      console.log(`チャネル '${channelId}' のメッセージ (最新${sortedMessages.length}件):`);
+      sortedMessages.forEach(message => {
         const sender = message.from?.user?.displayName || message.from?.application?.displayName || '不明な送信者';
         const content = message.body?.contentType === 'html' ? message.body.content : message.body?.content; // HTMLの場合はそのまま、textの場合はcontent
         // 簡単なHTMLタグ除去 (本番ではより堅牢なサニタイズ処理を推奨)

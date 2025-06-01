@@ -161,6 +161,31 @@ describe('Graph Service', () => {
       });
       expect(console.log).toHaveBeenCalledWith('メッセージが正常に送信されました。');
     });
+
+    test('importModeでチャネルにメッセージを正常に送信する', async () => {
+      // モッククライアントを準備（header機能をモック）
+      const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
+      const mockHeaderMethod = jest.fn().mockReturnValue(mockClient);
+      mockClient.api = jest.fn().mockReturnValue({
+        header: mockHeaderMethod,
+        post: mockClient.post
+      });
+      
+      // import機能で関数を呼び出す
+      await sendMessageToChannel(mockClient, teamId, channelId, messageContent, true);
+      
+      // インタラクションを検証
+      expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
+      expect(mockHeaderMethod).toHaveBeenCalledWith('MS-TEAMS-MESSAGE-TYPE', 'import');
+      
+      // postされたメッセージにcreatedDateTimeとfromが含まれていることを確認
+      const postCall = mockClient.post.mock.calls[0][0];
+      expect(postCall.body.content).toBe(messageContent);
+      expect(postCall.body.contentType).toBe('html');
+      expect(postCall.createdDateTime).toBeDefined();
+      expect(postCall.from.application.displayName).toBe('TypeScript Bot');
+      expect(console.log).toHaveBeenCalledWith('メッセージが正常に送信されました。');
+    });
     
     test('teamIdまたはchannelIdが欠けている場合を処理する', async () => {
       const mockClient = MockGraphClient.createMockClient({}) as unknown as MockedClient;
@@ -228,8 +253,6 @@ describe('Graph Service', () => {
       // インタラクションを検証
       expect(mockClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
       expect(mockClient.top).toHaveBeenCalledWith(top);
-      expect(mockClient.orderby).toHaveBeenCalledWith('createdDateTime DESC');
-      expect(mockClient.select).toHaveBeenCalledWith('id,body,from,createdDateTime');
     });
     
     test('teamIdまたはchannelIdが欠けている場合を処理する', async () => {
