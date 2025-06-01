@@ -1,14 +1,15 @@
 // src/graphService.ts
-import { Client } from '@microsoft/microsoft-graph-client';
 import { Team, Channel, ChatMessage } from '@microsoft/microsoft-graph-types';
+import { getApplicationClient, getDelegatedClient } from './auth';
 
 /**
  * 認証されたユーザーが参加しているチームの一覧を取得します。
- * @param client 認証済みのMicrosoft Graphクライアント
+ * Application認証を使用します。
  */
-export async function listMyTeams(client: Client): Promise<void> {
-  console.log('アプリケーションがアクセス可能なチームの一覧を取得しています...'); // メッセージ変更
+export async function listMyTeams(): Promise<void> {
+  console.log('アプリケーションがアクセス可能なチームの一覧を取得しています...');
   try {
+    const client = await getApplicationClient();
     // クライアント資格情報フローでは /me は使えないため、/teams を使用
     const response = await client.api('/teams') 
       .select('id,displayName,description') // 必要なプロパティのみを選択
@@ -34,16 +35,17 @@ export async function listMyTeams(client: Client): Promise<void> {
 
 /**
  * 指定したチームのチャネル一覧を取得します。
- * @param client 認証済みのMicrosoft Graphクライアント
+ * Application認証を使用します。
  * @param teamId チームID
  */
-export async function listChannels(client: Client, teamId: string): Promise<void> {
+export async function listChannels(teamId: string): Promise<void> {
   if (!teamId) {
     console.warn('チームIDが指定されていません。チャネル一覧の取得をスキップします。');
     return;
   }
   console.log(`チームID: ${teamId} のチャネル一覧を取得しています...`);
   try {
+    const client = await getApplicationClient();
     const response = await client.api(`/teams/${teamId}/channels`)
       .select('id,displayName,description')
       .get();
@@ -68,13 +70,12 @@ export async function listChannels(client: Client, teamId: string): Promise<void
 
 /**
  * 指定したチームの指定したチャネルにメッセージを送信します。
- * @param client 認証済みのMicrosoft Graphクライアント
+ * Delegated認証を自動的に使用します。
  * @param teamId チームID
  * @param channelId チャネルID
  * @param messageContent 送信するメッセージの本文
  */
 export async function sendMessageToChannel(
-  client: Client, 
   teamId: string, 
   channelId: string, 
   messageContent: string
@@ -89,6 +90,7 @@ export async function sendMessageToChannel(
     return;
   }
   
+  console.log(`📤 Delegated認証でメッセージを送信します...`);
   console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信しています...`);
   
   const chatMessage: ChatMessage = {
@@ -99,6 +101,7 @@ export async function sendMessageToChannel(
   };
 
   try {
+    const client = await getDelegatedClient();
     await client.api(`/teams/${teamId}/channels/${channelId}/messages`).post(chatMessage);
     console.log('✅ メッセージが正常に送信されました。');
   } catch (error) {
@@ -109,13 +112,12 @@ export async function sendMessageToChannel(
 
 /**
  * 指定したチームの指定したチャネルのメッセージ一覧を取得します。
- * @param client 認証済みのMicrosoft Graphクライアント
+ * Application認証を使用します。
  * @param teamId チームID
  * @param channelId チャネルID
  * @param top 取得するメッセージの最大数 (オプション)
  */
 export async function listChannelMessages(
-  client: Client, 
   teamId: string, 
   channelId: string, 
   top: number = 10 // デフォルトで最新10件を取得
@@ -126,6 +128,7 @@ export async function listChannelMessages(
   }
   console.log(`チームID: ${teamId}, チャネルID: ${channelId} のメッセージ一覧を取得しています (上位${top}件)...`);
   try {
+    const client = await getApplicationClient();
     const response = await client.api(`/teams/${teamId}/channels/${channelId}/messages`)
       .top(top)
       .get();

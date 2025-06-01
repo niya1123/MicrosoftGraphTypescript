@@ -1,7 +1,6 @@
 // src/index.ts
 import 'dotenv/config'; // .envファイルを読み込む
 import * as readline from 'readline';
-import { getAuthenticatedClient } from './auth';
 import { listMyTeams, listChannels, listChannelMessages, sendMessageToChannel } from './graphService';
 
 // メインの非同期関数
@@ -9,14 +8,12 @@ async function main() {
   console.log('アプリケーションを開始します...');
 
   try {
-    // 認証済みGraphクライアントを取得
-    const graphClient = await getAuthenticatedClient();
-    console.log('Microsoft Graphクライアントの認証に成功しました。');
+    console.log('Microsoft Graph API操作を開始します...');
 
     // --- ここから具体的なGraph API操作を実装します ---
 
     // 例1: 参加しているチームの一覧を取得して表示
-    await listMyTeams(graphClient);
+    await listMyTeams();
 
     // .envファイルまたは環境変数でTARGET_TEAM_IDとTARGET_CHANNEL_IDを設定してください
     const teamId = process.env.TARGET_TEAM_ID;
@@ -25,16 +22,16 @@ async function main() {
     if (teamId) {
       // 例2: 指定したチームのチャネル一覧を取得
       console.log('\n--- チャネル一覧の取得テスト ---');
-      await listChannels(graphClient, teamId);
+      await listChannels(teamId);
 
       if (channelId) {
         // 例3: 指定したチャネルのメッセージ一覧を取得
         console.log('\n--- メッセージ一覧の取得テスト ---');
-        await listChannelMessages(graphClient, teamId, channelId, 5); // 最新5件を取得
+        await listChannelMessages(teamId, channelId, 5); // 最新5件を取得
 
         // 例4: 対話的メッセージ送信機能
         console.log('\n--- 対話的メッセージ送信 ---');
-        await interactiveMessageSending(graphClient, teamId, channelId);
+        await interactiveMessageSending(teamId, channelId);
       } else {
         console.warn(
           'TARGET_CHANNEL_ID が環境変数に設定されていません。メッセージ一覧取得とメッセージ送信はスキップされます。'
@@ -61,7 +58,7 @@ async function main() {
  * 対話的メッセージ送信機能
  * ユーザーからの入力を受け取ってメッセージを送信します
  */
-async function interactiveMessageSending(graphClient: any, teamId: string, channelId: string): Promise<void> {
+async function interactiveMessageSending(teamId: string, channelId: string): Promise<void> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -97,7 +94,7 @@ async function interactiveMessageSending(graphClient: any, teamId: string, chann
       
       // メッセージを送信
       console.log(`\n📤 メッセージを送信中: "${message}"`);
-      await sendMessageToChannel(graphClient, teamId, channelId, message);
+      await sendMessageToChannel(teamId, channelId, message);
       console.log('');
       
     } catch (error: any) {
