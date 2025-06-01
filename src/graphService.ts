@@ -122,8 +122,6 @@ export async function listChannelMessages(
   try {
     const response = await client.api(`/teams/${teamId}/channels/${channelId}/messages`)
       .top(top)
-      .orderby('createdDateTime DESC') // 新しい順にソート
-      .select('id,body,from,createdDateTime') // 必要な情報を選択
       .get();
     
     const messages: ChatMessage[] = response.value;

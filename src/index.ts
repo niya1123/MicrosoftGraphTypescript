@@ -31,11 +31,22 @@ async function main() {
         console.log('\n--- メッセージ一覧の取得テスト ---');
         await listChannelMessages(graphClient, teamId, channelId, 5); // 最新5件を取得
 
-        // 例4: 特定のチームの特定のチャネルにメッセージを送信
+        // 例4: 特定のチームの特定のチャネルにメッセージを送信 (権限がある場合のみ)
         console.log('\n--- メッセージ送信テスト ---');
         const messageContent = 'TypeScriptアプリからのテストメッセージです！ (時刻: ' + new Date().toLocaleString('ja-JP') + ')';
         console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信します...`);
-        await sendMessageToChannel(graphClient, teamId, channelId, messageContent);
+        try {
+          await sendMessageToChannel(graphClient, teamId, channelId, messageContent);
+        } catch (error: any) {
+          if (error.code === 'Forbidden' && error.message?.includes('Teamwork.Migrate.All')) {
+            console.log('⚠️  メッセージ送信にはTeamwork.Migrate.All権限が必要です。現在は読み取り専用で動作しています。');
+          } else if (error.code === 'Unauthorized' && error.message?.includes('Message POST is allowed in application-only context only for import purposes')) {
+            console.log('⚠️  Application認証では通常のメッセージ送信はできません。読み取り専用で動作しています。');
+            console.log('   📖 詳細: https://docs.microsoft.com/microsoftteams/platform/graph-api/import-messages/import-external-messages-to-teams');
+          } else {
+            throw error; // 他のエラーは再スロー
+          }
+        }
       } else {
         console.warn(
           'TARGET_CHANNEL_ID が環境変数に設定されていません。メッセージ一覧取得とメッセージ送信はスキップされます。'
