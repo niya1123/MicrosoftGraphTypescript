@@ -92,7 +92,7 @@ export async function sendMessageToChannel(
   
   console.log(`チームID: ${teamId}, チャネルID: ${channelId} にメッセージを送信しています...`);
   
-  // 1. Delegated認証を試行（ユーザーコンテキストでの送信）
+  // Delegated認証でメッセージを送信
   try {
     console.log('📤 Delegated認証でメッセージを送信中...');
     const { getDelegatedClient } = await import('./auth');
@@ -108,49 +108,15 @@ export async function sendMessageToChannel(
     await delegatedClient.api(`/teams/${teamId}/channels/${channelId}/messages`)
       .post(message);
       
-    console.log('✅ メッセージが正常に送信されました（Delegated認証）。');
-    return;
+    console.log('✅ メッセージが正常に送信されました。');
   } catch (error) {
-    console.warn('⚠️ Delegated認証でのメッセージ送信に失敗しました:', error);
-    console.log('📤 Application権限でのメッセージ送信にフォールバックします...');
-  }
-
-  // 2. Application認証でフォールバック（import mode）
-  try {
-    console.log('📤 Application権限でメッセージを送信中（import mode）...');
-    const client = await getApplicationClient();
-    
-    // import contextでメッセージを作成
-    const importMessage: ChatMessage = {
-      createdDateTime: new Date().toISOString(),
-      from: {
-        application: {
-          displayName: 'Microsoft Graph API Bot',
-          id: 'graph-api-bot'
-        }
-      },
-      body: {
-        content: messageContent,
-        contentType: 'text'
-      },
-      messageType: 'message',
-      importance: 'normal'
-    };
-
-    await client.api(`/teams/${teamId}/channels/${channelId}/messages`)
-      .header('Content-Type', 'application/json')
-      .post(importMessage);
-      
-    console.log('✅ メッセージが正常に送信されました（Application権限 - import mode）。');
-  } catch (error) {
-    console.error('❌ すべての認証方法でメッセージ送信に失敗しました:', error);
-    console.log('\n💡 メッセージ送信を成功にするには、以下のいずれかを実行してください:');
+    console.error('❌ メッセージ送信に失敗しました:', error);
+    console.log('\n💡 メッセージ送信を成功にするには、以下を実行してください:');
     console.log('   1. Azure Portal > App registrations > 認証:');
     console.log('      - リダイレクト URI: http://localhost:3000/auth/callback');
     console.log('      - Publicクライアントフローを許可: はい');
     console.log('   2. Azure Portal > API のアクセス許可:');
     console.log('      - ChannelMessage.Send (Delegated)');
-    console.log('      - ChannelMessage.Send (Application) - 管理者の同意が必要');
     console.log('   3. Teams管理センターでアプリケーションを承認\n');
     throw error;
   }

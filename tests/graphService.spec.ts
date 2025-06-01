@@ -193,7 +193,7 @@ describe('Graph Service', () => {
           contentType: 'text',
         },
       });
-      expect(console.log).toHaveBeenCalledWith('✅ メッセージが正常に送信されました（Delegated認証）。');
+      expect(console.log).toHaveBeenCalledWith('✅ メッセージが正常に送信されました。');
     });
     
     test('teamIdまたはchannelIdが欠けている場合を処理する', async () => {
@@ -228,17 +228,15 @@ describe('Graph Service', () => {
       // エラーをスローするモッククライアントを準備
       const mockError = new Error('API Error');
       const mockDelegatedClient = createMockClient(mockError, true);
-      const mockApplicationClient = createMockClient(mockError, true);
       
       (getDelegatedClient as jest.Mock).mockResolvedValue(mockDelegatedClient);
-      (getApplicationClient as jest.Mock).mockResolvedValue(mockApplicationClient);
       
       // 関数を呼び出して、スローされることを期待
       await expect(sendMessageToChannel(teamId, channelId, messageContent)).rejects.toThrow('API Error');
       
       // インタラクションを検証 - Delegated認証が試行されることを確認
       expect(mockDelegatedClient.api).toHaveBeenCalledWith(`/teams/${teamId}/channels/${channelId}/messages`);
-      expect(console.error).toHaveBeenCalledWith('❌ すべての認証方法でメッセージ送信に失敗しました:', mockError);
+      expect(console.error).toHaveBeenCalledWith('❌ メッセージ送信に失敗しました:', mockError);
     });
   });
 
