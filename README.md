@@ -291,14 +291,10 @@ Docker を使用してアプリケーションを実行するには、`docker-co
 ├── src
 │   ├── auth.ts         # Microsoft Graph の認証ロジック
 │   ├── graphService.ts # Teams 操作のために Microsoft Graph API と対話するサービス
-│   ├── index.ts        # メインアプリケーションのエントリポイント 
+│   ├── index.ts        # メインアプリケーションのエントリポイント
 │   └── types           # カスタム型定義
 │       └── graph.d.ts
 └── tests
     ├── auth.spec.ts          # 認証機能のテスト
-    ├── graphService.spec.ts  # Graph APIを使ったTeams操作機能のテスト
-    └── mocks                 # モックオブジェクト
-        ├── auth.mock.ts
-        ├── mockAuth.ts
-        └── mockGraphClient.ts
+    └── graphService.spec.ts  # Graph API を使った Teams 操作機能のテスト
 ```
